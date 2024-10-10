@@ -41,12 +41,12 @@ def analyze_image(image_path):
     base64_image = encode_image(image_path)
 
     response = openai_client.chat.completions.create(
-        model="gpt-4-vision-preview",  # 올바른 모델명 사용
+        model="gpt-4o-mini", 
         messages=[
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "이 이미지에 대해 상세히 설명해주세요. 주요 내용, 분위기, 느낌 등을 포함해 주세요."},
+                    {"type": "text", "text": "이 이미지에 대해 설명해주세요. 주요 내용, 분위기, 느낌 등을 포함해 주세요."},
                     {
                         "type": "image_url",
                         "image_url": {
