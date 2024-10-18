@@ -6,6 +6,7 @@ from langchain_experimental.tools import PythonAstREPLTool
 from langchain.agents import initialize_agent, AgentType
 from langchain.chat_models import ChatOpenAI
 from langchain_community.tools import TavilySearchResults
+from langchain.schema import AgentAction, AgentFinish
 
 # Python 코드 실행을 위한 REPL 도구 초기화
 python_repl = PythonAstREPLTool()
@@ -18,9 +19,9 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 # 에이전트 초기화
 agent = initialize_agent(
-    [python_repl, web_search],  # 사용할 도구 리스트에 web_search 추가
+    [python_repl, web_search],
     llm,
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION,
     verbose=True,
     handle_parsing_errors=True
 )
@@ -44,6 +45,10 @@ Firebase Admin SDK를 사용하여 Firebase 데이터베이스 데이터를 조�
 serviceAccountKey.json 경로는 /Users/yoonjae/Desktop/AI-X/RAG/LangChain/mirrorgram-20713-firebase-adminsdk-u9pdx-c3e12134b4.json 입니다.
 
 서버 엔드포인트 정보:
+
+서버의 ip주소는 192.168.0.13:8000 입니다.
+curl 말고 파이썬 코드로 호출해야 합니다.
+
 1. /chat (POST): 사용자와 선택한 페르소나 간의 1:1 대화를 처리합니다.
    파라미터: ChatRequest (persona_name, user_input, user)
 
@@ -92,30 +97,44 @@ def run_agent_until_complete(initial_task):
         print(f"현재 작업: {current_task}")
 
         try:
-            result = agent.run(agent_instructions + "\n\n" + current_task)
-            results.append(result)
-            print(f"작업 결과: {result}")
+            result = agent({"input": agent_instructions + "\n\n" + current_task})
+            
+            if isinstance(result, dict) and "output" in result:
+                output = result["output"]
+            else:
+                output = str(result)
+            
+            results.append(output)
+            print(f"작업 결과: {output}")
 
-            # 결과에 '작업 완료'가 포함되어 있는지 확인
-            if "작업 완료" in result.lower():
+            if "작업 완료" in output:
                 print("에이전트가 작업 완료를 보고했습니다.")
-                break  # 작업 완료 시 루프 종료
+                user_confirm = input("모든 작업이 완료되었습니까? (예/아니오): ").lower()
+                if user_confirm == '예':
+                    break
+                else:
+                    user_input = input("추가로 수행할 작업을 입력해주세요: ")
+                    if user_input.strip():
+                        task_queue.append(user_input)
+                    else:
+                        print("추가 작업이 없으므로 프로그램을 종료합니다.")
+                        break
 
-            # '추가 작업 필요'가 없고 사용자 입력도 요구하지 않는 경우
-            if "추가 작업 필요" not in result:
+            elif "추가 작업 필요" in output:
+                new_task = output.split("추가 작업 필요:")[1].strip()
+                task_queue.append(new_task)
+                print(f"새로운 작업이 추가되었습니다: {new_task}")
+
+            else:
                 user_input = input("작업이 완료되었습니까? 추가 작업이 필요하면 입력해주세요 (완료되었다면 '완료' 입력): ")
                 if user_input.lower() == '완료':
                     print("사용자가 작업 완료를 확인했습니다.")
-                    break  # 사용자가 완료를 확인하면 루프 종료
+                    break
                 elif user_input.strip():
                     task_queue.append(user_input)
                 else:
                     print("추가 작업이 없으므로 프로그램을 종료합니다.")
                     break
-            else:
-                new_task = result.split("추가 작업 필요: ")[1]
-                task_queue.append(new_task)
-                print(f"새로운 작업이 추가되었습니다: {new_task}")
 
         except Exception as e:
             print(f"오류 발생: {e}")

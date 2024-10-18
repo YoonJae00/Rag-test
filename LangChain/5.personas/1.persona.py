@@ -13,8 +13,10 @@ import time
 import threading
 from datetime import datetime, timedelta
 import schedule
+from datetime import datetime
+import pytz
 
-my_persona = '1. "오늘 아침 6시에 일어나 30분 동안 요가를 했다. 샤워 후 간단한 아침 식사로 오트밀과 과일을 먹었다. 8시에 출근해서 오전 회의에 참석했고, 점심은 동료들과 회사 근처 샐러드 바에서 먹었다. 오후에는 프로젝트 보고서를 작성하고, 6시에 퇴근했다. 저녁에는 집에서 넷플릭스로 드라마를 한 편 보고 11시에 취침했다."2. "오늘은 휴일이라 늦잠을 자고 10시에 일어났다. 브런치로 팬케이크를 만들어 먹고, 오후에는 친구와 약속이 있어 카페에서 만났다. 함께 영화를 보고 저녁식사로 이탈리안 레스토랑에 갔다. 집에 돌아와 독서를 하다가 12시경 잠들었다."3. "아침 7시에 기상해서 공원에서 5km 조깅을 했다. 집에 돌아와 샤워하고 출근 준비를 했다. 재택근무 날이라 집에서 일했는데, 오전에 화상회의가 있었고 오후에는 보고서 작성에 집중했다. 저녁에는 요리를 해먹고, 기타 연습을 1시간 했다. 10시 30분에 취침했다."4. "오늘은 6시 30분에 일어나 아침 뉴스를 보며 커피를 마셨다. 8시에 출근해서 오전 내내 고객 미팅을 했다. 점심은 바쁜 일정 때문에 사무실에서 도시락으로 해결했다. 오후에는 팀 회의와 이메일 처리로 시간을 보냈다. 퇴근 후 헬스장에 들러 1시간 운동을 하고, 집에 와서 간단히 저녁을 먹고 10시 30분에 잠들었다."5. "주말 아침, 8시에 일어나 베이킹을 했다. 직접 만든 빵으로 아침을 먹고, 오전에는 집 대청소를 했다. 점심 후에는 근처 도서관에 가서 2시간 동안 책을 읽었다. 저녁에는 가족들과 함께 바비큐 파티를 열어 즐거운 시간을 보냈다. 밤에는 가족과 보드게임을 하다가 11시 30분에 잠들었다."'
+my_persona = '1. "오늘 아침 6시에 일어나 30분 동안 요가를 했다. 샤워 후 간단한 아침 식사로 오트밀과 과일을 먹었다. 8시에 출근해서 오전 회의에 참석했고, 점심은 동료들과 회사 근처 샐러드 바에서 먹었다. 오후에는 프로젝트 보고서를 작성하고, 6시에 퇴근했다. 저녁에는 집에서 넷플릭스로 드라마를 한 편 보고 11시에 취침했다."2. "오늘은 휴일이라 늦잠을 자고 10시에 일어났다. 브런치로 팬케이크를 만들어 먹고, 오후에는 친구와 약속이 있어 카페에서 만났다. 함께 영화를 보고 저녁식사로 이탈리안 레스토랑에 갔다. 집에 돌아와 독서를 하다가 12시경 잠들었다."3. "아침 7시에 기상해서 공원에서 5km 조깅을 했다. 집에 돌아와 샤워하고 출근 준비를 했다. 재택근무 날이라 집에서 일했는데, 오전에 화상회의가 있었고 오후에는 보고서 작성에 집중했다. 저녁에는 요리를 해먹고, 기타 연습을 1시간 했다. 10시 30분에 취침했다."4. "오늘은 6시 30분에 일어나 아침 뉴스를 보며 커피를 마셨다. 8시에 출근해서 오전 내내 고객 미팅을 했다. 점심은 바쁜 일정 때문에 사무실에서 도시락으로 해결했다. 오후에는 팀 회의와 이메일 처리로 시간을 보냈다. 퇴근 �� 헬스장에 들러 1시간 운동을 하고, 집에 와서 간단히 저녁을 먹고 10시 30분에 잠들었다."5. "주말 아침, 8시에 일어나 베이킹을 했다. 직접 만든 빵으로 아침을 먹고, 오전에는 집 대청소를 했다. 점심 후에는 근처 도서관에 가서 2시간 동안 책을 읽었다. 저녁에는 가족들과 함께 바비큐 파티를 열어 즐거운 시간을 보냈다. 밤에는 가족과 보드게임을 하다가 11시 30분에 잠들었다."'
 
 personas = {
     "Joy": {
@@ -44,10 +46,65 @@ personas = {
     },
 }
 
-# 사용자별 페르소나 정보
+def summarize_calendar_events(events):
+    summary = ""
+    seoul_tz = pytz.timezone('Asia/Seoul')
+    
+    for event in events['items']:
+        start_time = datetime.fromisoformat(event['start']['dateTime']).astimezone(seoul_tz)
+        end_time = datetime.fromisoformat(event['end']['dateTime']).astimezone(seoul_tz)
+        
+        summary += f"{start_time.strftime('%H:%M')}에 '{event['summary']}'(이)가 있습니다. "
+        summary += f"장소는 {event.get('location', '미정')}이며, {end_time.strftime('%H:%M')}에 끝납니다. "
+    
+    return summary.strip()
+
+# Google Calendar API 응답을 시뮬레이션하는 예시 데이터
+calendar_data = {
+    "items": [
+        {
+            "summary": "팀 회의",
+            "description": "정기 팀 회의 - 프로젝트 진행 상황 공유",
+            "location": "서울 본사 회의실",
+            "start": {
+                "dateTime": "2024-10-18T10:00:00+09:00",
+            },
+            "end": {
+                "dateTime": "2024-10-18T11:00:00+09:00",
+            },
+        },
+        {
+            "summary": "점심 식사",
+            "description": "친구들과의 점심 약속",
+            "location": "강남역 근처 식당",
+            "start": {
+                "dateTime": "2024-10-18T12:30:00+09:00",
+            },
+            "end": {
+                "dateTime": "2024-10-18T13:30:00+09:00",
+            },
+        },
+        {
+            "summary": "헬스장 운동",
+            "description": "헬스장에서 운동하기",
+            "location": "강남 헬스장",
+            "start": {
+                "dateTime": "2024-10-18T18:00:00+09:00",
+            },
+            "end": {
+                "dateTime": "2024-10-18T19:30:00+09:00",
+            },
+        },
+    ]
+}
+
+# 캘린더 이벤트 요약
+calendar_summary = summarize_calendar_events(calendar_data)
+
+# user_personas 딕셔너리 업데이트
 user_personas = {
-    "user1": '1. "오늘 아침 6시에 일어나 30분 동안 요가를 했다. 샤워 후 간단한 아침 식사로 오트밀과 과일을 먹었다. 8시에 출근해서 오전 회의에 참석했고, 점심은 동료들과 회사 근처 샐러드 바에서 먹었다. 오후에는 프로젝트 보고서를 작성하고, 6시에 퇴근했다. 저녁에는 집에서 넷플릭스로 드라마를 한 편 보고 11시에 취침했다."',
-    "user2": '2. "오늘은 휴일이라 늦잠을 자고 10시에 일어났다. 브런치로 팬케이크를 만들어 먹고, 오후에는 친구와 약속이 있어 카페에서 만났다. 함께 영화를 보고 저녁식사로 이탈리안 레스토랑에 갔다. 집에 돌아와 독서를 하다가 12시경 잠들었다."'
+    "user1": f"오늘의 일정: {calendar_summary}",
+    "user2": '오늘은 휴일이라 늦잠을 자고 10시에 일어났다. 브런치로 팬케이크를 만들어 먹고, 오후에는 친구와 약속이 있어 카페에서 만났다. 함께 영화를 보고 저녁식사로 이탈리안 레스토랑에 갔다. 집에 돌아와 독서를 하다가 12시경 잠들었다.'
 }
 
 # OpenAI 객체를 생성합니다.
@@ -55,30 +112,25 @@ model = ChatOpenAI(temperature=0, model_name="gpt-4o")
 
 class ScheduleItem(BaseModel):
     time: str = Field(description="활동 시간")
-    interaction_target: str = Field(description="상호작용 대상 페르소나")
-    topic: str = Field(description="대화 주제 또는 상호작용 내용")
+    primary_persona: str = Field(description="주요 페르소나")
+    secondary_persona: str = Field(description="보조 페르소나")
+    topic: str = Field(description="주인의 일정에 대한 대화 주제")
 
-class PersonaSchedule(BaseModel):
-    persona: str = Field(description="페르소나 이름")
-    schedule: List[ScheduleItem] = Field(description="해당 페르소나의 하루 일정 목록")
+class DailySchedule(BaseModel):
+    schedule: List[ScheduleItem] = Field(description="하루 일정 목록")
 
-class AllPersonasSchedule(BaseModel):
-    schedules: List[PersonaSchedule] = Field(description="모든 페르소나의 일정")
-
-parser = JsonOutputParser(pydantic_object=AllPersonasSchedule)
+parser = JsonOutputParser(pydantic_object=DailySchedule)
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """당신은 주인의 페르소나 5명(Joy, Anger, Disgust, Sadness, Fear)의 상호작용하는 일정을 만드는 챗봇입니다. 
-    각 페르소나의 특성은 다음과 같습니다: {personas}
+    ("system", """당신은 주인의 일정에 맞춰 페르소나들의 대화를 생성하는 챗봇입니다. 
+    페르소나들의 특성은 다음과 같습니다: {personas}
     
     다음 지침을 따라 일정을 만들어주세요:
-    1. 각 페르소나별로 10개의 일정 항목을 만들어주세요.
-    2. 각 일정 항목은 다른 페르소나와의 상호작용이나 주인의 일정에 대한 대화여야 합니다.
-    3. 시간을 정각이 아닌 랜덤한 시간으로 설정해주세요 (예: 06:17, 08:43 등).
-    4. 페르소나들이 주인의 일과, 감정, 생각, 행동에 대해 토론하거나 반응하는 상황을 포함시켜주세요.
-    5. 페르소나들 간의 갈등, 화해, 협력 등 다양한 상호작용을 포함시켜주세요.
-    6. 24시간 동안의 일정이므로, 페르소나들의 일정이 서로 겹치지 않도록 해주세요.
-    7. 각 페르소나의 특성이 잘 드러나도록 대화 주제나 상호작용을 설계해주세요.
+    1. 주인의 일정에서 중요한 시점마다 대화 주제를 생성해주세요 (약 5-7개).
+    2. 각 시점마다 주인의 감정과 가장 일치하는 페르소나와 그 반대의 페르소나를 선택하세요.
+    3. 시간을 정각, 10분 단위가 아닌 랜덤한 시간으로 설정해주세요 (예: 06:17, 08:43 등).
+    4. 선택된 두 페르소나가 주인의 일정, 감정, 생각, 행동에 대해 대화하는 주제를 만들어주세요.
+    5. 각 페르소나의 특성이 잘 드러나도록 대화 주제를 설계해주세요.
     """),
     ("user", "다음 형식에 맞춰 일정을 작성해주세요: {format_instructions}\n\n 주인의 오늘 일정: {input}")
 ])
@@ -91,41 +143,37 @@ chain = prompt | model | parser
 
 def generate_daily_schedule(user_id):
     result = chain.invoke({"input": user_personas[user_id]})
-    return AllPersonasSchedule(**result)
+    return DailySchedule(**result)
 
-def print_schedules(all_schedules, user_id):
+def print_schedule(schedule, user_id):
     print(f"\n사용자 {user_id}의 일정:")
-    for persona_schedule in all_schedules.schedules:
-        print(f"\n{persona_schedule.persona}의 일정:")
-        for item in persona_schedule.schedule:
-            print(f"{item.time}: {persona_schedule.persona} : target : {item.interaction_target}: {item.topic}")
+    for item in schedule.schedule:
+        print(f"{item.time}: from : {item.primary_persona} to : {item.secondary_persona}: {item.topic}")
     print()
 
-def create_task(user_id, persona_name, target_name, topic):
+def create_task(user_id, primary_persona, secondary_persona, topic):
     def task():
-        print(f"사용자 {user_id}: 현재 시간에 '{persona_name}'가 '{target_name}'에게 다음 주제로 상호작용합니다: {topic}")
-        # 여기에서 실제 상호작용 함수를 호출하면 됩니다.
-        # 예를 들어, send_message(user_id, persona_name, target_name, topic)
-        print('함수 실행')
+        print(f"사용자 {user_id}: 현재 시간에 '{primary_persona}'와 '{secondary_persona}'가 다음 주제로 대화합니다: {topic}")
+        # 여기에서 실제 대화 생성 함수를 호출하면 됩니다.
+        # 예: generate_conversation(user_id, primary_persona, secondary_persona, topic)
     return task
 
-def schedule_tasks(all_schedules, user_id):
-    for persona_schedule in all_schedules.schedules:
-        for item in persona_schedule.schedule:
-            task_function = create_task(user_id, persona_schedule.persona, item.interaction_target, item.topic)
-            schedule.every().day.at(item.time).do(task_function).tag(user_id)
+def schedule_tasks(daily_schedule, user_id):
+    for item in daily_schedule.schedule:
+        task_function = create_task(user_id, item.primary_persona, item.secondary_persona, item.topic)
+        schedule.every().day.at(item.time).do(task_function).tag(user_id)
 
     print(f"사용자 {user_id}의 모든 작업이 예약되었습니다.")
 
 def daily_schedule_update(user_id):
     print(f"사용자 {user_id}의 새로운 일정을 생성하고 등록합니다...")
-    all_schedules = generate_daily_schedule(user_id)
-    print_schedules(all_schedules, user_id)
+    daily_schedule = generate_daily_schedule(user_id)
+    print_schedule(daily_schedule, user_id)
     
     # 기존 사용자의 예약된 작업들을 모두 취소
     schedule.clear(tag=user_id)
     
-    schedule_tasks(all_schedules, user_id)
+    schedule_tasks(daily_schedule, user_id)
 
 # 각 사용자에 대해 매일 새벽 1시에 일정 업데이트 함수 실행
 for user_id in user_personas.keys():
