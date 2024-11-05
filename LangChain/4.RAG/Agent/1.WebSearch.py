@@ -8,7 +8,7 @@ logging.langsmith("langchain-test")
 
 from langchain_community.tools import TavilySearchResults
 
-query = "10월 15일 낢씨 알려줘."
+query = "PSG 뉴스."
 
 web_search = TavilySearchResults(max_results=1)
 
